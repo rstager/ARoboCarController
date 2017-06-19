@@ -15,9 +15,10 @@ noise_probability=0.01  #how often to deviate - set to zero to drive correctly
 deviation_duration=20   # duration of deviation
 
 sim=simulator.Simulator()
-sim.connect()
-
-
+config=sim.connect()
+print (config)
+height=config["cameraheight"]
+width=config["camerawidth"]
 
 #now open the h5 file
 maxidx=32
