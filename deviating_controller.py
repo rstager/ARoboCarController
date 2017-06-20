@@ -36,6 +36,7 @@ while True:
     # record images and steering,throttle
     state=sim.get_state()
     controls[h5idx]= [state["PIDsteering"],state["PIDthrottle"]]
+    images[h5idx]=state["frontcamera"]
     h5idx += 1
     if(h5idx>=maxidx):
         maxidx += 32
