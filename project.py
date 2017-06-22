@@ -1,0 +1,2 @@
+datadir="../data/"
+modeldir="../data/"

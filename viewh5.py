@@ -3,8 +3,10 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import h5py
+import os
+import project
 
-input = h5py.File("robocar.hdf5", 'r')
+input = h5py.File(os.path.join(project.datadir,"robocar.hdf5"), 'r')
 imagesin=input['frontcamera']
 anglesin=input['steering.throttle']
 

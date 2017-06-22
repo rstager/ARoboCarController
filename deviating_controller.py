@@ -4,15 +4,17 @@ import numpy as np
 import sys
 import random
 import simulator
+import project
+import os
 
 # This controller just follows the PID recommendations most of the time but deviates to capture off-policy state
 # this controller also records state
 
 #runtime configuration parameters
-filename="robocar.hdf5" # or None
+filename=os.path.join(project.datadir,"robocar.hdf5") # or None
 steering_noise=.15      #amount of noise to add to steering
 noise_probability=0.01  #how often to deviate - set to zero to drive correctly
-deviation_duration=20   # duration of deviation
+deviation_duration=40   # duration of deviation
 
 sim=simulator.Simulator()
 config=sim.connect()
@@ -26,6 +28,8 @@ output = h5py.File(filename, 'w')
 images = output.create_dataset('frontcamera', (maxidx, height, width, 3), 'i1',
                                          maxshape=(None, height, width, 3))
 images.attrs['description'] = "simple test"
+
+
 controls = output.create_dataset('steering.throttle', (maxidx, 2), maxshape=(None, 2))
 
 #parameters for deviating
@@ -35,8 +39,9 @@ while True:
     # get images and state from simulator
     # record images and steering,throttle
     state=sim.get_state()
-    controls[h5idx]= [state["PIDsteering"],state["PIDthrottle"]]
-    images[h5idx]=state["frontcamera"]
+    controls[h5idx] = [state["PIDsteering"], state["PIDthrottle"]]
+    images[h5idx] = state["frontcamera"]
+
     h5idx += 1
     if(h5idx>=maxidx):
         maxidx += 32
@@ -49,7 +54,7 @@ while True:
     #use the PID values by default
     steering=state["PIDsteering"]
     throttle=state["PIDthrottle"]
-    offset=state["offset"] #distance from center of road
+    offset=state["pathoffset"] #distance from center of road
 
     if deviating_cnt > 0 and abs(offset) > 75:  # stop deviating if we ran off the road
         deviating_cnt = 0

@@ -42,3 +42,21 @@ class Simulator:
     def disconnect(self):
         self.fstate.close()
         self.fcmd.close()
+
+    def reset(self):
+        for i in range(10):
+            print("pausing")
+            tmp=self.get_state()
+            self.send_cmd({"steering": 0, "throttle": 0})
+        print("send reset")
+        tmp = self.get_state()
+        self.send_cmd({"command": "reset"})
+        tmp = self.get_state()
+        self.send_cmd({"steering": 0, "throttle": 0})
+        tmp = self.get_state()
+        self.send_cmd({"command": "reset"})
+        for i in range(10):
+            print("pausing")
+            tmp=self.get_state()
+            self.send_cmd({"steering": 0, "throttle": 0})
+        print("Done")
