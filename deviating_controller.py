@@ -36,6 +36,7 @@ controls = output.create_dataset('steering.throttle', (maxidx, 2), maxshape=(Non
 deviating_cnt=0
 h5idx=0
 while True:
+  try:
     # get images and state from simulator
     # record images and steering,throttle
     state=sim.get_state()
@@ -72,5 +73,7 @@ while True:
         deviation_angle = steering + random.random() * steering_noise - (steering_noise / 2)
         print("** Begin Steering deviation {}".format(deviation_angle))
 
-
     sim.send_cmd({"steering":steering,'throttle':throttle})
+
+  except TypeError:
+    pass

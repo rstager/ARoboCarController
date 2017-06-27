@@ -27,7 +27,7 @@ class Simulator:
         try:
             return pickle.load(self.fstate)
         except EOFError:
-            print("Connection closed")
+            #print("Connection closed")
             return None
 
     def send_cmd(self,command):
