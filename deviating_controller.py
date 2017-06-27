@@ -6,7 +6,6 @@ import random
 import simulator
 import project
 import os
-import time
 
 # This controller just follows the PID recommendations most of the time but deviates to capture off-policy state
 # this controller also records state
@@ -37,8 +36,6 @@ controls = output.create_dataset('steering.throttle', (maxidx, 2), maxshape=(Non
 deviating_cnt=0
 h5idx=0
 while True:
-  #Too fast
-  time.sleep(0.01)
   try:
     # get images and state from simulator
     # record images and steering,throttle
