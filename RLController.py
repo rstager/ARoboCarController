@@ -8,6 +8,7 @@ import random
 import os
 import project
 
+
 # model names
 initial_model_filename=os.path.join(project.modeldir,"model_1.h5")
 model_filename=os.path.join(project.modeldir,"model_rl_{}.h5")
@@ -36,7 +37,8 @@ def reward_func(state):
     offset=state["pathoffset"]
     if abs(offset) > 100:
         return -1000-speed
-    return speed*0.01-abs(state['pathoffset'])*.01
+    #return speed*0.01-abs(state['pathoffset'])*.01
+    return speed * 0.01
 reward_func.last_distance=0
 
 def retrain(model,generation):
@@ -80,7 +82,9 @@ model = load_model(initial_model_filename.format(1))
 offroad_cnt=0
 for policy_gen in range(1,100):
     dshape=model.input_shape
-    dshape=[experience_count,90,160,3]
+    dshape=(experience_count,dshape[1],dshape[2],dshape[3])
+    print("dshape={}".format(dshape))
+    #dshape=[experience_count,90,160,3]
     output,images,controls,reward,sample_noise=open_h5(policy_gen,dshape)
 
     for h5idx in range(experience_count):
@@ -93,8 +97,9 @@ for policy_gen in range(1,100):
         noise=[random.gauss(0,s) for s in sigma]
         control=predict+noise
         rwrd=reward_func(state)
-        print("steering {:+5.3f}{:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} pathdistance {:10.1f} offset {:+5.1f} PID {:+5.3f} {:+5.3f} dt={:5.4f}"
-              .format(predict[0],noise[0],predict[1],noise[1],rwrd,state["pathdistance"], state["pathoffset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
+        #print("steering {:+5.3f}{:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} pathdistance {:10.1f} offset {:+5.1f} PID {:+5.3f} {:+5.3f} dt={:5.4f}"
+        #      .format(predict[0],noise[0],predict[1],noise[1],rwrd,state["pathdistance"], state["pathoffset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
+        print("throttle= {:+5.3f}{:+5.3f} reward={:4.2f} speed {:+5.3f}".format(predict[1],noise[1],rwrd,state["speed"]))
         sim.send_cmd({"steering":control[0],'throttle':control[1]})
 
         #record experience
