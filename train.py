@@ -28,8 +28,8 @@ nval=nsamples-ntrain
 #imagesin = HDF5Matrix(filename, 'frontcamera',start=0,end=1000)
 #controlsin = HDF5Matrix(filename, 'steering.throttle',start=0,end=1000)
 
-width=160 #should add these to h5 parameters
-height=90
+nsamples,height,width,channels=imagesin.shape
+
 print(imagesin.shape,controlsin.shape)
 
 print(np.mean(imagesin[0:100]))
