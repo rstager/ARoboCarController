@@ -13,7 +13,7 @@ import os
 #runtime configuration parameters
 filename=os.path.join(project.datadir,"robocar.hdf5") # or None
 steering_noise=.15      #amount of noise to add to steering
-noise_probability=0.01  #how often to deviate - set to zero to drive correctly
+noise_probability=0.001  #how often to deviate - set to zero to drive correctly
 deviation_duration=40   # duration of deviation
 
 sim=simulator.Simulator()
@@ -48,7 +48,6 @@ while True:
         images.resize((maxidx, height, width, 3))
         controls.resize((maxidx, 2))
         output.flush()
-        print("Flushing h5")
 
     #print("pathdistance {:7f} offset {:5f} PID {:7f}  {:5.3f} dt={:5.4f}".format(state["pathdistance"], state["offset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
     #use the PID values by default
