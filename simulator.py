@@ -50,6 +50,6 @@ class Simulator:
         print("send reset")
         tmp = self.get_state()
         self.send_cmd({"command": "reset"})
-        for i in range(10):)
+        for i in range(10):
             tmp=self.get_state()
             self.send_cmd({"steering": 0, "throttle": 0})
