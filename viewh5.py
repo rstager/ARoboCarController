@@ -7,7 +7,8 @@ import os
 import project
 
 input = h5py.File(os.path.join(project.datadir,"robocar.hdf5"), 'r')
-imagesin=input['frontcamera']
+config,nsamples,datasets=project.getDatasets(input)
+imagesin=datasets[0]
 anglesin=input['steering.throttle']
 
 fig, ax = plt.subplots()

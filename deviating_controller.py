@@ -6,6 +6,7 @@ import random
 import simulator
 import project
 import os
+import project
 
 # This controller just follows the PID recommendations most of the time but deviates to capture off-policy state
 # this controller also records state
@@ -13,41 +14,32 @@ import os
 #runtime configuration parameters
 filename=os.path.join(project.datadir,"robocar.hdf5") # or None
 steering_noise=.15      #amount of noise to add to steering
-noise_probability=0.001  #how often to deviate - set to zero to drive correctly
+noise_probability=0.01  #how often to deviate - set to zero to drive correctly
 deviation_duration=40   # duration of deviation
 
 sim=simulator.Simulator()
 config=sim.connect()
-print (config)
 height=config["cameraheight"]
 width=config["camerawidth"]
 
 #now open the h5 file
 maxidx=32
 output = h5py.File(filename, 'w')
-images = output.create_dataset('frontcamera', (maxidx, height, width, 3), 'i1',
-                                         maxshape=(None, height, width, 3))
-images.attrs['description'] = "simple test"
-
-
-controls = output.create_dataset('steering.throttle', (maxidx, 2), maxshape=(None, 2))
+datasets=project.createDatasets(config,output,maxidx)
+controls = output.create_dataset('steering.throttle', (maxidx, 2))
 
 #parameters for deviating
 deviating_cnt=0
-h5idx=0
-while True:
+
+for h5idx in range(0,maxidx):
     # get images and state from simulator
     # record images and steering,throttle
     state=sim.get_state()
     controls[h5idx] = [state["PIDsteering"], state["PIDthrottle"]]
-    images[h5idx] = state["frontcamera"]
-
+    Xs=project.State2X(state)
+    for ds,x in zip(datasets,Xs):  ds[h5idx]=x
     h5idx += 1
-    if(h5idx>=maxidx):
-        maxidx += 32
-        images.resize((maxidx, height, width, 3))
-        controls.resize((maxidx, 2))
-        output.flush()
+    output.flush()
 
     #print("pathdistance {:7f} offset {:5f} PID {:7f}  {:5.3f} dt={:5.4f}".format(state["pathdistance"], state["offset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
     #use the PID values by default

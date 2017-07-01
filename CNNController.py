@@ -16,9 +16,7 @@ sim.connect()
 
 while True:
     state=sim.get_state()
-    img=state["frontcamera"]
-    img=np.reshape(img,(1,img.shape[0],img.shape[1],img.shape[2]))
-    p=model.predict(img)
+    p=model.predict(project.State2X(state))
     steering=p[0][0,0]
     throttle=p[1][0,0]
     print("steering {:5.3f} throttle {:5.3f} pathdistance {:7f} offset {:5f} PID {:5.3f} {:5.3f} dt={:5.4f}".format(steering,throttle,state["pathdistance"], state["pathoffset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
