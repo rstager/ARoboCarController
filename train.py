@@ -17,66 +17,19 @@ filename=os.path.join(project.datadir,"robocar.hdf5")
 model_filename=os.path.join(project.modeldir,"model_1.h5")
 
 input = h5py.File(filename, 'r')
-imagesin=input['frontcamera']
+config, nsamples, datasets=project.getDatasets(input)
 controlsin=input['steering.throttle']
 
-nsamples=imagesin.shape[0]
 ntrain=int(nsamples*0.9)
 nval=nsamples-ntrain
 
-
-#imagesin = HDF5Matrix(filename, 'frontcamera',start=0,end=1000)
-#controlsin = HDF5Matrix(filename, 'steering.throttle',start=0,end=1000)
-
-nsamples,height,width,channels=imagesin.shape
-
-print(imagesin.shape,controlsin.shape)
-
-print(np.mean(imagesin[0:100]))
-print(np.std(imagesin[0:100]))
-print(np.mean(controlsin[0,0:100]))
 
 #datagen = ImageDataGenerator(
 #    featurewise_center=True,
 #    featurewise_std_normalization=True)
 
 
-def createCNNModel():
-    # Create the model
-    inp = Input((height,width, 3))
-    model = Sequential()
-    model.add(Conv2D(32,(3, 3), input_shape=(height,width, 3), padding='same', activation='relu'))
-    model.add(BatchNormalization())
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(MaxPooling2D((2,2)))
-    model.add(Dropout(0.2))
-    model.add(Conv2D(32,(3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(MaxPooling2D((2,2)))
-    model.add(Dropout(0.2))
-    model.add(Conv2D(32,(3, 3), padding='same', activation='relu'))
-    model.add(Conv2D(32,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(64,(3, 3),  padding='same', activation='relu'))
-    model.add(MaxPooling2D((2,2)))
-    model.add(Dropout(0.2))
-    model.add(Conv2D(64,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(64,(3, 3),  padding='same', activation='relu'))
-    model.add(Conv2D(64,(3, 3),  padding='same', activation='relu'))
-    model.add(Dropout(0.2))
-    model.add(Flatten())
-    x=Dense(32, activation='relu')(model(inp))
-    steering_model=Dense(1, activation='linear',name="steering")(x)
-    x=Dense(32, activation='relu')(model(inp))
-    throttle_model=Dense(1, activation='linear',name="throttle")(x)
-    combined_model=Model(inp,[steering_model,throttle_model])
-    # Compile models
-    opt = Adam(lr=0.00001)
-    combined_model.compile(loss='mean_squared_error', optimizer=opt)
-    return combined_model
+
 
 def generator(Xh5,yh5):
     m=Xh5.shape[0]
@@ -92,14 +45,13 @@ def generator(Xh5,yh5):
             s = 0
 
 # create our CNN model
-model = createCNNModel()
-print("CNN Model created.")
-print(np.mean(imagesin[100:120]),np.std(imagesin[100:120]))
-model.fit_generator(generator(imagesin[:ntrain],controlsin[:ntrain]), steps_per_epoch=100 ,verbose=1,
-                    validation_data=generator(imagesin[ntrain:],controlsin[ntrain:]),validation_steps=10,
+model = project.createModel(config)
+print("Model created.")
+model.fit(datasets, [controlsin[:,0],controlsin[:,1]], verbose=1,
+                    validation_split=0.2,
                     epochs=10,callbacks=[ModelCheckpoint("model_1e.h5")])
 print("evaluate")
-print(model.evaluate_generator(generator(imagesin[ntrain:],controlsin[ntrain:]), 1))
+print(model.evaluate(datasets,[controlsin[:,0],controlsin[:,1]]))
 #print("Predict")
 #print(model.predict_generator(generator(imagesin[ntrain:],controlsin[ntrain:]), 10))
 model.save(model_filename)
