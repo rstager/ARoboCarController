@@ -11,7 +11,7 @@ model=load_model(os.path.join(project.modeldir,"model_1.h5"))
 print(model.summary())
 
 sim=simulator.Simulator()
-sim.connect()
+config=sim.connect({"trackname":project.trackname})
 
 
 while True:

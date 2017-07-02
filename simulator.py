@@ -4,6 +4,7 @@ import tempfile
 # This class manages a connection to the RoboCar simulator
 
 class Simulator:
+    # argument can be a dictionary of config changes, or a callable that takes and returns a config dictionary.
     def connect(self,confighook=None):
         tmpdir=tempfile.gettempdir()
         state_filename=os.path.join(tmpdir,"sim_state")
@@ -18,7 +19,10 @@ class Simulator:
         print("Connection opened")
         config = pickle.load(self.fstate)
         if confighook != None:
-            config=confighook(config)
+            if(callable(confighook)):
+                config=confighook(config)
+            else:
+                config.update(confighook)
         pickle.dump(config,self.fcmd)
         self.fcmd.flush()
         return config

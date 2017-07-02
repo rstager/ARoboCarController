@@ -18,12 +18,12 @@ noise_probability=0.01  #how often to deviate - set to zero to drive correctly
 deviation_duration=40   # duration of deviation
 
 sim=simulator.Simulator()
-config=sim.connect()
+config=sim.connect({"trackname":project.trackname})
 height=config["cameraheight"]
 width=config["camerawidth"]
 
 #now open the h5 file
-maxidx=32
+maxidx=10000
 output = h5py.File(filename, 'w')
 datasets=project.createDatasets(config,output,maxidx)
 controls = output.create_dataset('steering.throttle', (maxidx, 2))

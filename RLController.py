@@ -16,10 +16,11 @@ import project
 
 model_filename=os.path.join(project.modeldir,"model_rl_{}.h5") # model names
 filename_h5=os.path.join(project.datadir,"RL_experience_{}.h5") # temporary experience file
+first_gen=2 # starting with generation - will load saved model (first_gen-1)
 experience_count=10000 # length of each recording
 sigma=[0.005,0.002] # noise to add to RL controls [steering,throttle]
-imitation_count=0 # first N generations will mimic PID controller, set initial_model_name if this is zero
-initial_model_filename=os.path.join(project.modeldir,"model_1.h5")
+imitation_count=1 # first N generations will mimic PID controller, set initial_model_name if this is zero
+#initial_model_filename=os.path.join(project.modeldir,"model_1.h5")
 
 def open_h5(generation,nsamples,camerashape):
     output = h5py.File(filename_h5.format(generation), 'w')
@@ -79,14 +80,9 @@ def retrain(model, generation, imitating=True):
 
     return model
 
-def config_hook(config):
-    print("config hook",config)
-    #make changes here if you want
-    return config
-
 #connect to simulator
 sim=simulator.Simulator()
-config=sim.connect(config_hook)
+config=sim.connect({"trackname":project.trackname})
 
 
 steering_noise=.15      #amount of noise to add to steering
@@ -120,19 +116,19 @@ def imitation_predict(state):
 
     return [steering, throttle],[noise,0]
 
-if imitation_count > 0 :
+if imitation_count >= first_gen :
     print("create new model ".format())
     model = project.createModel(config)
 else:
-    print("loading pretrained model {}".format(1))
-    model = load_model(initial_model_filename.format(1))
+    print("loading pretrained model {}".format(first_gen))
+    model = load_model(model_filename.format(first_gen))
 print(model.summary())
 
 offroad_cnt=0
 height = config["cameraheight"]
 width = config["camerawidth"]
 
-for policy_gen in range(1,100):
+for policy_gen in range(first_gen,100):
     reward_sum=0
     dshape=model.input_shape
     print("Input Shape {}".format(dshape))
@@ -153,7 +149,7 @@ for policy_gen in range(1,100):
         rwrd=reward_func(state) # todo: move to simulator.py
         #print("steering {:+5.3f}{:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} pathdistance {:10.1f} offset {:+5.1f} PID {:+5.3f} {:+5.3f} dt={:5.4f}"
         #      .format(predict[0],noise[0],predict[1],noise[1],rwrd,state["pathdistance"], state["pathoffset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
-        #print("steering {:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} speed {:+5.3f} ".format(predict[0],predict[1],noise[1],rwrd,state["speed"]))
+        print("steering {:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} speed {:+5.3f} ".format(predict[0],predict[1],noise[1],rwrd,state["speed"]))
         sim.send_cmd({"steering":control[0],'throttle':control[1]})
 
         #record experience

@@ -3,6 +3,7 @@ import pickle
 import numpy as np
 import sys
 import simulator
+import project
 
 # This controller just follows the PID recommendations
 def hook(config):
@@ -10,7 +11,7 @@ def hook(config):
     return config
 
 sim=simulator.Simulator()
-sim.connect(hook)
+config=sim.connect({"trackname":project.trackname})
 
 
 while True:
