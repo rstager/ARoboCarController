@@ -6,12 +6,9 @@ import simulator
 import project
 
 # This controller just follows the PID recommendations
-def hook(config):
-    print(config)
-    return config
-
 sim=simulator.Simulator()
 config=sim.connect({"trackname":project.trackname})
+print(config)
 
 
 while True:
