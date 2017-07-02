@@ -15,6 +15,7 @@ import project
 
 filename=os.path.join(project.datadir,"robocar.hdf5")
 model_filename=os.path.join(project.modeldir,"model_1.h5")
+checkpoint_filename=os.path.join(project.modeldir,"model_1.h5")
 
 input = h5py.File(filename, 'r')
 config, nsamples, datasets=project.getDatasets(input)
@@ -49,7 +50,7 @@ model = project.createModel(config)
 print("Model created.")
 model.fit(datasets, [controlsin[:,0],controlsin[:,1]], verbose=1,
                     validation_split=0.2,
-                    epochs=10,callbacks=[ModelCheckpoint("model_1e.h5")])
+                    epochs=10,callbacks=[ModelCheckpoint(checkpoint_filename)])
 print("evaluate")
 print(model.evaluate(datasets,[controlsin[:,0],controlsin[:,1]]))
 #print("Predict")
