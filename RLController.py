@@ -123,6 +123,7 @@ else:
     print("loading pretrained model {}".format(first_gen))
     model = load_model(model_filename.format(first_gen))
 print(model.summary())
+ninputs=len(model.input_shape)
 
 offroad_cnt=0
 height = config["cameraheight"]
@@ -142,7 +143,7 @@ for policy_gen in range(first_gen,100):
         if imitating:
             predict,noise=imitation_predict(state)
         else:
-            p = model.predict(Xs)
+            p = model.predict(Xs[:ninputs])
             predict=[p[0][0, 0],p[1][0, 0]]
             noise=[random.gauss(0,s) for s in sigma]
         control=np.add(predict,noise)

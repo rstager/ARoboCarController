@@ -18,42 +18,18 @@ model_filename=os.path.join(project.modeldir,"model_1.h5")
 checkpoint_filename=os.path.join(project.modeldir,"model_1.h5")
 
 input = h5py.File(filename, 'r')
-config, nsamples, datasets=project.getDatasets(input)
+config, nsamples, datasets =project.getDatasets(input)
 controlsin=input['steering.throttle']
-
-ntrain=int(nsamples*0.9)
-nval=nsamples-ntrain
-
-
-#datagen = ImageDataGenerator(
-#    featurewise_center=True,
-#    featurewise_std_normalization=True)
-
-
-
-
-def generator(Xh5,yh5):
-    m=Xh5.shape[0]
-    s=0
-    while 1:
-        e=s+32
-        X=Xh5[s:e]
-        y=yh5[s:e]
-        y=[yh5[s:e,0],yh5[s:e,1]]
-        yield (X,y)
-        s +=32
-        if s+32 > m:
-            s = 0
 
 # create our CNN model
 model = project.createModel(config)
-print("Model created.")
-model.fit(datasets, [controlsin[:,0],controlsin[:,1]], verbose=1,
+ninputs=len(model.input_shape)
+print("Model created.",ninputs)
+model.fit(datasets[:ninputs], [controlsin[:,0],controlsin[:,1]], verbose=1,
                     validation_split=0.2,
                     epochs=10,callbacks=[ModelCheckpoint(checkpoint_filename)])
 print("evaluate")
-print(model.evaluate(datasets,[controlsin[:,0],controlsin[:,1]]))
-#print("Predict")
-#print(model.predict_generator(generator(imagesin[ntrain:],controlsin[ntrain:]), 10))
+print(model.metrics_names)
+print(model.evaluate(datasets[:ninputs],[controlsin[:,0],controlsin[:,1]]))
 model.save(model_filename)
 
