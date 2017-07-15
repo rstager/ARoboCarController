@@ -7,7 +7,7 @@ import simulator
 import random
 import os
 import project
-
+import importlib
 
 
 # Reinforcement controller
@@ -16,11 +16,12 @@ import project
 
 model_filename=os.path.join(project.modeldir,"model_rl_{}.h5") # model names
 filename_h5=os.path.join(project.datadir,"RL_experience_{}.h5") # temporary experience file
-first_gen=2 # starting with generation - will load saved model (first_gen-1)
+first_gen=1 # starting with generation - will load saved model (first_gen-1)
 experience_count=10000 # length of each recording
-sigma=[0.005,0.002] # noise to add to RL controls [steering,throttle]
-imitation_count=1 # first N generations will mimic PID controller, set initial_model_name if this is zero
-#initial_model_filename=os.path.join(project.modeldir,"model_1.h5")
+sigma=[0.005,0.0002] # noise to add to RL controls [steering,throttle]
+imitation_count=0 # first N generations w
+# ill mimic PID controller, set initial_model_name if this is zero
+initial_model_filename=os.path.join(project.modeldir,"model_racetrack2_fulltraining.h5")
 
 def open_h5(generation,nsamples,camerashape):
     output = h5py.File(filename_h5.format(generation), 'w')
@@ -40,49 +41,11 @@ def reward_func(state):
     return speed * 0.01
 reward_func.last_distance=0
 
-def retrain(model, generation, imitating=True):
-    input = h5py.File(filename_h5.format(generation), 'r')
-    config,nsamples,retrain_datasets = project.getDatasets(input)
-    retrain_controlsin = input['steering.throttle'] # original policy without deviation
-    retrain_reward=input['rewards']
-    retrain_noise=input["sample_noise"]             # deviation
-    if imitating:
-        retrain_y = [retrain_controlsin[:,0 ],retrain_controlsin[:,1]]
-        model.lr=0.01
-    else:  # Reinforcement Learning
-        wl=60 # how far to calculate discounted future reward
-        advantage=np.zeros_like(retrain_controlsin)
-        discount_factor=0.97
-        for n in range(0,nsamples-1):
-            discount=1
-            rv=0
-            twl=min(wl,nsamples-n)
-            for m in range(0,twl-1):
-                rv=retrain_reward[n+m]*discount
-                discount *= discount_factor
-            rv /= twl
-            advantage[n] = rv/twl
-        advantage = (advantage - np.mean(advantage)) / np.std(advantage)  # improves training per karpathy
-        advantaged_controls=retrain_controlsin + retrain_noise*advantage
-        #advantaged_controls[:,1]=0.7
-        print("Generation {}".format(generation))
-        print("advantage={} noise={} product={}".format(np.mean(advantage, axis=0), np.mean(retrain_noise, axis=0),
-                                                        np.mean(retrain_noise * advantage, axis=0)))
-        retrain_y=[advantaged_controls[:,0],advantaged_controls[:,1]]
-        model.lr=0.0001
-    print("learning rate={}".format(model.lr))
-    model.fit(retrain_datasets, retrain_y, verbose=2, validation_split=0.2,batch_size=100,epochs=3,shuffle="batch")
 
-    # we should test if validation results improved
-    print("Predict")
-    p=model.predict(retrain_datasets, 20)
-    print(p[:10])
-
-    return model
 
 #connect to simulator
 sim=simulator.Simulator()
-config=sim.connect({"trackname":project.trackname})
+config=sim.connect({"trackname":project.trackname,'controller':importlib.util.find_spec("EmbeddedController").origin})
 
 
 steering_noise=.15      #amount of noise to add to steering
@@ -115,8 +78,9 @@ def imitation_predict(state):
         print("** Begin Steering deviation {}".format(deviation_angle))
 
     return [steering, throttle],[noise,0]
-
-if imitation_count >= first_gen :
+if initial_model_filename:
+    model = load_model(initial_model_filename)
+elif imitation_count >= first_gen :
     print("create new model ".format())
     model = project.createModel(config)
 else:
@@ -124,6 +88,7 @@ else:
     model = load_model(model_filename.format(first_gen))
 print(model.summary())
 ninputs=len(model.input_shape)
+print(model.input_shape)
 
 offroad_cnt=0
 height = config["cameraheight"]
@@ -136,7 +101,9 @@ for policy_gen in range(first_gen,100):
     output,datasets,controls,reward,sample_noise=open_h5(policy_gen,experience_count,(height,width,3)) #todo:change to take config
 
     imitating = policy_gen <= imitation_count
-
+    resetidx=0
+    reset_cnt=0
+    reset_reward_sum=0
     for h5idx in range(experience_count):
         state=sim.get_state()
         Xs=project.State2X(state)
@@ -150,7 +117,8 @@ for policy_gen in range(first_gen,100):
         rwrd=reward_func(state) # todo: move to simulator.py
         #print("steering {:+5.3f}{:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} pathdistance {:10.1f} offset {:+5.1f} PID {:+5.3f} {:+5.3f} dt={:5.4f}"
         #      .format(predict[0],noise[0],predict[1],noise[1],rwrd,state["pathdistance"], state["pathoffset"], state["PIDthrottle"], state["PIDsteering"],state["delta_time"]))
-        print("steering {:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} speed {:+5.3f} ".format(predict[0],predict[1],noise[1],rwrd,state["speed"]))
+        print("{:6}/{:6} tsr {:6} reward {:10.0f} steering {:+5.3f} throttle= {:+5.3f}{:+5.3f} reward={:4.2f} speed {:+5.3f} "
+              .format(h5idx,experience_count,h5idx-resetidx,reward_sum-reset_reward_sum,predict[0],predict[1],noise[1],rwrd,state["speed"]))
         sim.send_cmd({"steering":control[0],'throttle':control[1]})
 
         #record experience
@@ -163,15 +131,18 @@ for policy_gen in range(first_gen,100):
             print("final distance={}".format(state["pathdistance"]))
         if (state["pathoffset"]>200):
             offroad_cnt +=1
-            if(offroad_cnt>100):
+            if(offroad_cnt>10):
                 print("Offroad resetting")
                 sim.reset()
                 offroad_cnt=0
+                resetidx=h5idx
+                reset_reward_sum=reward_sum
+                reset_cnt+=1
         else:
             offroad_cnt =0
         reward_sum += rwrd
 
-    print("Generation {} avg reward={}".format(policy_gen,reward_sum/experience_count))
+    print("Generation {} avg reward={} resets={}".format(policy_gen,reward_sum/experience_count,reset_cnt))
     print("mean {}".format(np.mean(reward)))
 
     output.flush()
@@ -179,7 +150,8 @@ for policy_gen in range(first_gen,100):
     sim.reset()
 
     #update the model
-    print("Retrain")
-    model=retrain(model,policy_gen,imitating)
+    print("Retrain Generation {}".format(policy_gen))
+    input = h5py.File(filename_h5.format(policy_gen), 'r')
+    model=project.retrain(input,model)
     print("save model {}".format(policy_gen+1))
     model.save(model_filename.format(policy_gen+1))
