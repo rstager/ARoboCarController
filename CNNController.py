@@ -22,4 +22,5 @@ while True:
     steering=p[0][0,0]
     throttle=p[1][0,0]
     print("steering {:5.3f} throttle {:5.3f} speed={:5.4f}".format(steering,throttle,state["speed"]))
+    throttle=0.8 # disable throttle control
     sim.send_cmd({"steering":steering,'throttle':throttle})
