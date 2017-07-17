@@ -1,6 +1,7 @@
 import pickle
 import os
 import tempfile
+import importlib
 # This class manages a connection to the RoboCar simulator
 
 class Simulator:
@@ -23,6 +24,8 @@ class Simulator:
                 config=confighook(config)
             else:
                 config.update(confighook)
+        if('controller' in config):
+            config['controller']=importlib.util.find_spec(config['observer']).origin
         pickle.dump(config,self.fcmd)
         self.fcmd.flush()
         return config

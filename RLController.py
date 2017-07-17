@@ -26,7 +26,7 @@ initial_model_filename=os.path.join(project.modeldir,"model_racetrack2_fulltrain
 def open_h5(generation,nsamples,camerashape):
     output = h5py.File(filename_h5.format(generation), 'w')
     datasets = project.createDatasets(config, output, nsamples)
-    controls = output.create_dataset('steering.throttle', (nsamples, 2))
+    controls = output.create_dataset('controls', (nsamples, 2))
     rewards = output.create_dataset('rewards', (nsamples,1))
     noise = output.create_dataset('sample_noise', (nsamples, 2))
     return output,datasets,controls,rewards,noise
@@ -45,7 +45,7 @@ reward_func.last_distance=0
 
 #connect to simulator
 sim=simulator.Simulator()
-config=sim.connect({"trackname":project.trackname,'controller':importlib.util.find_spec("EmbeddedController").origin})
+config=sim.connect(project.connection_properties)
 
 
 steering_noise=.15      #amount of noise to add to steering

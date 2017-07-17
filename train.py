@@ -23,7 +23,7 @@ if not os.path.exists(train_filename) or not os.path.getmtime(train_filename) > 
     h5shuffle(filename,train_filename)
 input = h5py.File(train_filename, 'r')
 config, nsamples, datasets =project.getDatasets(input)
-controlsin=input['steering.throttle']
+controlsin=input['controls']
 
 # create our CNN model
 model = project.createModel(config)

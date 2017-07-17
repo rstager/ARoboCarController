@@ -5,7 +5,7 @@ import project
 
 def retrain(input, model):
     config,nsamples,retrain_datasets = project.getDatasets(input)
-    retrain_controlsin = input['steering.throttle'] # original policy without deviation
+    retrain_controlsin = input['controls'] # original policy without deviation
     retrain_reward=input['rewards']
     retrain_noise=input["sample_noise"]             # deviation
 

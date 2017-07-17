@@ -13,7 +13,7 @@ print(model.summary())
 ninputs=len(model.input_shape)
 
 sim=simulator.Simulator()
-config=sim.connect({"trackname":project.trackname,'controller':importlib.util.find_spec("EmbeddedController").origin})
+config=sim.connect(project.connection_properties)
 
 
 while True:
