@@ -19,7 +19,8 @@ filename=os.path.join(project.datadir,"robocar.hdf5")
 model_filename=os.path.join(project.modeldir,"model_1.h5")
 checkpoint_filename=os.path.join(project.modeldir,"model_1.h5")
 train_filename=os.path.join(project.datadir,"train.hdf5")
-h5shuffle(filename,train_filename)
+if not os.path.exists(train_filename) or not os.path.getmtime(train_filename) > os.path.getmtime(filename):
+    h5shuffle(filename,train_filename)
 input = h5py.File(train_filename, 'r')
 config, nsamples, datasets =project.getDatasets(input)
 controlsin=input['steering.throttle']
@@ -30,9 +31,12 @@ ninputs=len(model.input_shape)
 print("Model created.",ninputs)
 model.summary()
 
-model.fit(datasets[:ninputs], [controlsin[:,0],controlsin[:,1]], verbose=1,
-                    validation_split=0.2,
-                    epochs=10,callbacks=[ModelCheckpoint(checkpoint_filename)])
+model.fit([datasets[0][:nsamples],datasets[1][:nsamples]],
+          [controlsin[:nsamples, 0].reshape(nsamples, 1), controlsin[:nsamples, 1].reshape(nsamples, 1)], verbose=1,
+          validation_split=0.1,
+          shuffle="batch",
+          epochs=10,
+          callbacks=[ModelCheckpoint(checkpoint_filename)])
 
 print("evaluate")
 print(model.metrics_names)
