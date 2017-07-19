@@ -7,17 +7,23 @@ import os
 import project
 
 input = h5py.File(os.path.join(project.datadir,"robocar.hdf5"), 'r')
-config,nsamples,datasets=project.getDatasets(input)
-imagesin=datasets[0]
-controlsin=input['controls']
-speedsin=input['speed']
+recorder=project.recorder(input)
 
-
+print("Number of samples={}".format(recorder.nsamples))
 fig, ax = plt.subplots()
 
-im = ax.imshow(imagesin[0])
-fig.show()
-for idx in range(imagesin.shape[0]):
-    print(idx,controlsin[idx],imagesin[idx].shape,speedsin[idx])
-    im.set_data(imagesin[idx]*255)
+first=True
+for idx in range(recorder.nsamples):
+    action=input['actions'][idx]
+    img=input['frontcamera'][idx]
+    sensor=input['sensors'][idx]
+    reward=input['rewards'][idx]
+
+    print("{} sensors {} actions {} reward {}".format(idx,sensor,action,reward,img.shape))
+    if first:
+        im = ax.imshow(img*255)
+        fig.show()
+        first=False
+    else:
+        im.set_data(img*255)
     fig.canvas.draw()

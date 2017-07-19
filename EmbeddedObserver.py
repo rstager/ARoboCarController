@@ -1,9 +1,17 @@
-from unreal_engine import FVector,FTransform,FRotator
 from math import sqrt
 import numpy as np
 
+#controller side functions
 
+def spaces(config):
+    from gym import spaces
+    import numpy as np
+    return spaces.Box(np.array([-1.0, -1.0, 0.0]), np.array([1.0, 1.0, 1.0]))  # steer, gas, brake    return
+
+
+# engine side functions
 def calc_speedlimit(path):
+    from unreal_engine import FVector
     limits=[]
     npoints=path.component.GetNumberOfSplinePoints()
     print(npoints)
@@ -13,20 +21,20 @@ def calc_speedlimit(path):
         A=100
         if n!= 0:
             speedlimit=sqrt(abs(A*(d1-d0)/FVector.cross(p,p1).z))
-            print("n {} d {} sl {} {}".format(n,d0,speedlimit,FVector.cross(p,p1).z))
+            print("n {} d {} sl {} {} {}".format(n,d0,speedlimit,FVector.cross(p,p1).z,speedlimit))
             limits.append(min(speedlimit,1400))
-            print("limits {} = {}".format(n, speedlimit))
         p1=p
         d1=d0
-
     return limits
+
 speedlimit=None
 throttle=0
 speed_integral = 0
 speed_delta = 0
 last_speed_error=0
 
-def drive(state,path,driver,pawn):
+def observe(delta_time,state,path,driver,pawn):
+    from unreal_engine import FVector
     global speedlimit,throttle,speed_integral,last_speed_error,didx,didxmax,diag
     if speedlimit==None:
         speedlimit=calc_speedlimit(path)
@@ -67,14 +75,14 @@ def drive(state,path,driver,pawn):
     speed_integral = speed_integral + speed_error
     speed_delta = speed_error - last_speed_error
     throttle = speed_error * 0.002 + speed_delta * 0.009 + speed_integral * 0.00002
-    print("key {:3.0f} angle {:-1.3f}  throttle {:-0.3f} goal {:4.0f} speed {:4.0f} offpath {:3.0f}".format(key,angle,throttle,goal_speed,speed,pathoffset))
+    print("key {:3.0f} angle {:-1.3f}  throttle {:-0.3f} goal {:4.0f} speed {:4.0f} offpath {:3.0f} odometer {:6.0f} lap {:3.0f} ".format(key,angle,throttle,goal_speed,speed,pathoffset,driver.odometer,driver.lapcnt))
     last_speed_error = speed_error
+    #state['observation'][1].append(sensor_data)
+    info=state['info']
+    info['ec']=[goal_speed,speed_delta,speed_integral]
+    info['delta_time']=delta_time
+    info['PIDsteering']= -angle
+    info['PIDthrottle']=throttle
+    info['pathoffset']=pathoffset
 
-    state.update({"ec.goal_speed":goal_speed,"ec.speed_delta":speed_delta,"ec.speed_integral":speed_integral})
     return throttle,angle
-
-def reward(state,path,driver,pawn):
-    pathdistance, pathoffset = path.closest(driver.location)
-    state.update({"pathoffset":pathoffset,"pathdistance":pathdistance})
-    ret=driver.speed
-    return ret

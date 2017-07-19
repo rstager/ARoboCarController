@@ -45,34 +45,30 @@ def createModel(config):
     combined_model.compile(loss='mean_squared_error', optimizer=opt)
     return combined_model
 
-# convert observation+info structure and normalize for model
-def preprocess(observation,info):
-    ret=observation
-    ret[1] *= np.array([0.001,0.001,0.00001])
-    return ret
-
-#convert output of model to structure/units used by arobocar
-def converta(actions):
-    return actions
-
-#convert observation+info to input to model
-def convertX(observation,info):
-    img = observation[0]
-    img = np.reshape(img, (1, img.shape[0], img.shape[1], img.shape[2]))
-    sensor = observation[1]
-    sensor = np.reshape(np.array([sensor[0] * .001, sensor[1] * .001, 0.0]), (1, 3))
-    return [img,sensor]
 
 scaled=np.array([0.001,0.001,0.00001])
+
+#convert structure and normalize single observation+info to input to model
+def convertX(observation,info):
+    X=[np.expand_dims(np.array(x),axis=0) for x in observation]
+    X[1]*=scaled
+    return X
+
+#convert output of model to structure/units used by arobocar: single action
+def converta(y):
+    return [y[0][0],y[1][0]]
+
+#convert array of arobocar actions to model y: used for imitation learning
+def converty(action):
+    return [action[:,0],action[:,1]]
+
 #record any additional items
 class recorder(H5Recorder):
     def __init__(self,h5file,config=None,maxidx=10000):
-        super().__init__(h5file, config,maxidx,preprocess=preprocess,postprocess=postprocess)
+        super().__init__(h5file, config,maxidx)
         if config: # only set for create
             self.ec=h5file.create_dataset('ec', (maxidx, 3), 'f')
             self.ec.attrs['cols']="speed,acceleration,odometer"
-        else:
-            self.ec=h5file['ec']
 
     # record a single observation
     def record(self, observation, reward, done, info):
@@ -80,18 +76,11 @@ class recorder(H5Recorder):
         self.ec[idx]=info['ec']
         return idx
 
-    # get an array of observations
-    def get(self, idx, cnt=1):
-        observation, reward, done, info = super().get(idx,cnt)
-        for i in range(cnt):
-            info[i]['ec']=self.ec[idx+i]
-        return observation, reward, done, info
-
-
-    # returns an array of observations,reward,..
+    # get batch of X from h5file, change structure and scale for model
     def getX(self,idx,cnt=1):
         X=[self.images[idx:idx+cnt],self.sensors[idx:idx+cnt]*scaled]
         return X
+
 
 
 

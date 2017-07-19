@@ -16,7 +16,7 @@ def h5shuffle(input_filename, output_filename=None):
         for k, v in input.attrs.items(): output.attrs[k] = v
     shuffle_idxs=None
     for name,dataset in input.items():
-        print("copy {} {}".format(name,dataset.shape))
+        print("copy dataset {} {}".format(name,dataset.shape))
         output_dataset= output.create_dataset(name, dataset.shape, dataset.dtype)
         if hasattr(dataset, 'attrs'):
             for k, v in dataset.attrs.items(): output_dataset.attrs[k] = v
@@ -32,11 +32,10 @@ def h5shuffle(input_filename, output_filename=None):
     rename(tmp_filename,output_filename)
 
 class H5Recorder:
-    def __init__(self,h5file,config=None,maxidx=None,preprocess=lambda o,i: o,postprocess=lambda a: a):
+    def __init__(self,h5file,config=None,maxidx=None,preprocess=lambda o,i: o,converta=lambda a: a):
         self.h5file=h5file
         self.h5idx = -1
-        self.preprocess=preprocess
-        self.postprocess=postprocess
+        self.converta=converta
         if config!=None:
             self.config=config
             height = config["cameraheight"]
@@ -57,7 +56,7 @@ class H5Recorder:
         self.nsamples = self.rewards.shape[0]
         self.lock = threading.Lock()
 
-
+    #record a single observation
     def record(self,observation,reward,done,info):
         self.h5idx += 1
         self.images[self.h5idx] = observation[0]
@@ -66,25 +65,16 @@ class H5Recorder:
         self.rewards[self.h5idx] = reward
         return self.h5idx
 
-    # returns an array of observations,reward,..
-    def get(self,idx,cnt=1):
-        observation=[self.images[idx:idx+cnt],self.sensors[idx:idx+cnt]]
-        done=self.dones[idx:idx+cnt]
-        reward=self.rewards[idx:idx+cnt]
-        info = [{}]*cnt
-        return observation,reward,done,info
-
     # generate input and actions for training
     # training dataset can be ignored for predictions
-    def generator(self, iter=None, actions=None, batchsz=32):
+    def generator(self, iter=None, gety=None, batchsz=32):
         with self.lock:
             if not iter:
                 m=self.nsamples
                 iter=range(m)
             while True:
                 for idx in iter:
-                    if actions:
-                        action = actions[idx:idx+batchsz]
-                        yield self.getX(idx,batchsz), self.converta(action)  # observations, actions
+                    if gety:
+                        yield self.getX(idx,batchsz), gety(idx,batchsz)  # observations, actions
                     else:
                         yield self.getX(idx,batchsz)

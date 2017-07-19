@@ -13,33 +13,50 @@ import h5py
 import os
 import project
 import random
-from utils import h5shuffle
+from h5utils import h5shuffle
 
-filename=os.path.join(project.datadir,"robocar.hdf5")
-model_filename=os.path.join(project.modeldir,"model_1.h5")
-checkpoint_filename=os.path.join(project.modeldir,"model_1.h5")
-train_filename=os.path.join(project.datadir,"train.hdf5")
-if not os.path.exists(train_filename) or not os.path.getmtime(train_filename) > os.path.getmtime(filename):
-    h5shuffle(filename,train_filename)
-input = h5py.File(train_filename, 'r')
-config, nsamples, datasets =project.getDatasets(input)
-controlsin=input['controls']
+def train(project, model_filename, filename="robocar.hdf5",train_filename="train.hdf5"):
+    # use project directories
+    pathname=os.path.join(project.datadir,filename )
+    train_pathname=os.path.join(project.datadir,train_filename)
+    checkpoint_pathname=os.path.join(project.modeldir,"checkpoint_"+model_filename)
+    model_pathname=os.path.join(project.modeldir,"model_1.h5")
 
-# create our CNN model
-model = project.createModel(config)
-ninputs=len(model.input_shape)
-print("Model created.",ninputs)
-model.summary()
+    #shuffle the data file if needed
+    if os.path.exists(train_pathname) or not os.path.getmtime(train_pathname) > os.path.getmtime(pathname):
+        h5shuffle(pathname, train_pathname)
 
-model.fit([datasets[0][:nsamples],datasets[1][:nsamples]],
-          [controlsin[:nsamples, 0].reshape(nsamples, 1), controlsin[:nsamples, 1].reshape(nsamples, 1)], verbose=1,
-          validation_split=0.1,
-          shuffle="batch",
-          epochs=10,
-          callbacks=[ModelCheckpoint(checkpoint_filename)])
+    #open input file
+    input = h5py.File(train_pathname, 'r')
+    recorder=project.recorder(input)
+    actions=input['actions']
+    config=recorder.config
+    nsamples=recorder.nsamples
 
-print("evaluate")
-print(model.metrics_names)
-print(model.evaluate(datasets[:ninputs],[controlsin[:,0],controlsin[:,1]]))
-model.save(model_filename)
+    # create our CNN model
+    model = project.createModel(config)
+    ninputs=len(model.input_shape)
+    print("Model created.",ninputs)
+    model.summary()
 
+    #imitation learning from recorded actions
+    def gety(idx,cnt):
+        return project.converty(input['actions'][idx:idx+cnt])
+
+    model.fit_generator(recorder.generator(range(int(nsamples*0.8)),gety),
+            steps_per_epoch=4,
+            epochs=10,
+            verbose=1,
+            #shuffle="batch",
+            #validation_data=recorder.generator(range(int(nsamples*0.8)),actions=True),
+            #validation_steps=100,
+            callbacks=[ModelCheckpoint(checkpoint_pathname)])
+
+    print("evaluate")
+    print(model.metrics_names)
+    print(model.evaluate_generator(recorder.generator(range(int(nsamples*0.8)),gety),steps=10))
+    model.save(model_pathname)
+
+if __name__ == "__main__":
+    # connect to environment
+    train(project,project.model_filename)
