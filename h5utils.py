@@ -31,6 +31,7 @@ def h5shuffle(input_filename, output_filename=None):
         unlink(input_filename)
     rename(tmp_filename,output_filename)
 
+
 class H5Recorder:
     def __init__(self,h5file,config=None,maxidx=None,preprocess=lambda o,i: o,converta=lambda a: a):
         self.h5file=h5file
@@ -65,6 +66,8 @@ class H5Recorder:
         self.rewards[self.h5idx] = reward
         return self.h5idx
 
+
+
     # generate input and actions for training
     # training dataset can be ignored for predictions
     def generator(self, iter=None, gety=None, batchsz=32):
@@ -78,3 +81,7 @@ class H5Recorder:
                         yield self.getX(idx,batchsz), gety(idx,batchsz)  # observations, actions
                     else:
                         yield self.getX(idx,batchsz)
+
+# gets a slice from dataset and converts it
+def h5gety(project, name, input, idx, cnt):
+    return project.converty(input[name][idx:idx + cnt])
