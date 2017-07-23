@@ -1,12 +1,9 @@
 from math import sqrt
 import numpy as np
 
-#controller side functions
-
-def spaces(config):
-    from gym import spaces
-    import numpy as np
-    return spaces.Box(np.array([-1.0, -1.0, 0.0]), np.array([1.0, 1.0, 1.0]))  # steer, gas, brake    return
+# Observer can modify the observation spaces
+def spaces(config,observations):
+    return
 
 
 # engine side functions
@@ -14,14 +11,13 @@ def calc_speedlimit(path):
     from unreal_engine import FVector
     limits=[]
     npoints=path.component.GetNumberOfSplinePoints()
-    print(npoints)
     for n in range(npoints):
         p=path.component.GetDirectionAtSplinePoint(n)
         d0=path.component.GetDistanceAlongSplineAtSplinePoint(n)
         A=100
         if n!= 0:
             speedlimit=sqrt(abs(A*(d1-d0)/FVector.cross(p,p1).z))
-            print("n {} d {} sl {} {} {}".format(n,d0,speedlimit,FVector.cross(p,p1).z,speedlimit))
+            #print("n {} d {} sl {} {} {}".format(n,d0,speedlimit,FVector.cross(p,p1).z,speedlimit))
             limits.append(min(speedlimit,1400))
         p1=p
         d1=d0
@@ -75,7 +71,7 @@ def observe(delta_time,state,path,driver,pawn):
     speed_integral = speed_integral + speed_error
     speed_delta = speed_error - last_speed_error
     throttle = speed_error * 0.002 + speed_delta * 0.009 + speed_integral * 0.00002
-    print("key {:3.0f} angle {:-1.3f}  throttle {:-0.3f} goal {:4.0f} speed {:4.0f} offpath {:3.0f} odometer {:6.0f} lap {:3.0f} ".format(key,angle,throttle,goal_speed,speed,pathoffset,driver.odometer,driver.lapcnt))
+    #print("key {:3.0f} angle {:-1.3f}  throttle {:-0.3f} goal {:4.0f} speed {:4.0f} offpath {:3.0f} odometer {:6.0f} lap {:3.0f} ".format(key,angle,throttle,goal_speed,speed,pathoffset,driver.odometer,driver.lapcnt))
     last_speed_error = speed_error
     #state['observation'][1].append(sensor_data)
     info=state['info']

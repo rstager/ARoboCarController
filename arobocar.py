@@ -5,6 +5,7 @@ import importlib.util
 import gym
 from gym import spaces
 import numpy as np
+from types import ModuleType
 #controller side functions
 
 
@@ -22,9 +23,15 @@ class ARoboCar(gym.Env):
         observations=[]
         observations.append(spaces.Box(low=0, high=255, shape=(config['cameraheight'], config['camerawidth'], 3)))
         observations.append(spaces.Box(np.array([-1.0,-1.0,0.0]), np.array([1.0,1.0,100000.0]))) # speed, accel, odometer
-        #if('observer' in self.config):
-        #    observations.append(self.spaces(config))
-        print(observations)
+        if('observercode' in self.config):
+            try:
+                self.observer = ModuleType("Observer", doc=None)
+                exec(self.config["observercode"], self.observer.__dict__)
+                if hasattr(self.observer,"spaces"):
+                    self.observer.spaces(config,observations)
+            except:
+                print("Failed to import and execute observer.spaces")
+
         self.observation_space = spaces.Tuple(observations)
 
         self.action_space = spaces.Box(np.array([-1.0,-1.0,0.0]), np.array([1.0,1.0,1.0])) # steer, gas, brake
@@ -94,7 +101,8 @@ class ARoboCar(gym.Env):
         if('observer' in config):
             with open(config['observer']+'.py', "r") as myfile:
                 config['observercode'] = myfile.read()
-#            config['observer']=importlib.util.find_spec(config['observer']).origin
+            # todo: removed this : deprecated compatibility with previous api
+            config['observer']=importlib.util.find_spec(config['observer']).origin
         pickle.dump(config,self.fcmd)
         self.fcmd.flush()
         self.connected=True
